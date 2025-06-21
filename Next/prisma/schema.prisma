@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "app/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                         String              @id @default(cuid())
+  username                   String              @unique
+  firstname                  String
+  lastname                   String
+  phonenumber                String
+  email                      String              @unique
+  password                   String
+  dob                        DateTime?
+  is_account_verified        Boolean             @default(false)
+  verify_otp                 Int?
+  verify_otp_expiry          DateTime?
+  forgot_password_otp        Int?
+  forgot_password_otp_expiry DateTime?
+  created_at                 DateTime            @default(now())
+  updated_at                 DateTime            @updatedAt
+  interviewSessions          Interview_session[] // Relation One-Many to Interview_session model
+  questions                  Question[] // Relation One-Many to Question model
+  technologies               Technology[] // Relation One-Many to Technology model
+  posts                      Post[] // Relation One-Many to Post model
+  likes                      Like[] // Relation One-Many to Like model
+  Answer                     Answer[] // Relation One-Many to Answer model
+}
+
+model Interview_session {
+  id            String       @id @default(cuid())
+  user          User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id       String
+  type          String
+  start_time    DateTime     @default(now())
+  end_time      DateTime?
+  position_type String
+  level         String
+  max_count     Int          @default(10)
+  avg_score     Int?
+  questions     Question[] // Relation one-Many to Question model
+  technologies  Technology[] // Relation One-Many to Technology model
+  Response      Response[] // Relation One-Many to Response model
+}
+
+model Question {
+  id                   String            @id @default(cuid())
+  user                 User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id              String
+  interview_session    Interview_session @relation(fields: [interview_session_id], references: [id], onDelete: Cascade)
+  interview_session_id String
+  question             String?
+  answer               String?
+  response             Response?
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
+}
+
+model Technology {
+  id                   String            @id @default(cuid())
+  name                 String
+  user                 User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id              String
+  interview_session    Interview_session @relation(fields: [interview_session_id], references: [id], onDelete: Cascade)
+  interview_session_id String
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
+}
+
+model Response {
+  id                   String            @id @default(cuid())
+  question             Question          @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  question_id          String            @unique
+  interview_session    Interview_session @relation(fields: [interview_session_id], references: [id], onDelete: Cascade)
+  interview_session_id String
+  feedback             String?
+  score                Int?
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
+}
+
+model Post {
+  id         String    @id @default(cuid())
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    String
+  question   String
+  answer     String    @db.VarChar(500)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  Answers    Answer[] // Relation One-Many to Answer model
+  likes      Like[] // Relation One-Many to Like model
+  post_tags  PostTag[] // Relation One-Many to PostTag model
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    String
+  answer     String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Like {
+  id         String   @id @default(cuid())
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id    String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, post_id], name: "userPost") // ✅ Composite unique constraint
+}
+
+model Tag {
+  id         String    @id @default(cuid())
+  tag_name   String    @unique @db.VarChar(50)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  tag_ids    PostTag[] // Relation One-Many to PostTag model
+}
+
+// Many-Many relationship table between Post and Tag
+model PostTag {
+  id         String   @id @default(cuid())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  tag        Tag      @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+  tag_id     String
+  post       Post     @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  post_id    String
+}
